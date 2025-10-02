@@ -1,0 +1,14 @@
+{
+  "provider": "custom",
+  "description": "On-premises DGX A100 pricing (amortized over 3 years)",
+  "CPU": "0.031611",
+  "spotCPU": "0.031611", 
+  "RAM": "0.004237",
+  "spotRAM": "0.004237",
+  "GPU": "0.95",
+  "storage": "0.04",
+  "zoneNetworkEgress": "0.01",
+  "regionNetworkEgress": "0.01",
+  "internetNetworkEgress": "0.12"
+}
+

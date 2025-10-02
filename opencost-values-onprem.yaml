@@ -1,0 +1,59 @@
+opencost:
+  exporter:
+    # Default cluster ID to use if cluster_id is not set in Prometheus metrics.
+    defaultClusterId: dgx-a100-cluster
+    
+    # Existing Prometheus server URL
+    extraEnv:
+      PROMETHEUS_SERVER_ENDPOINT: "http://kube-prometheus-stack-1741-prometheus.monitoring.svc.cluster.local:9090"
+      CLOUD_PROVIDER_API_KEY: "AIzaSyD29bGxmHAVEOBYtgd8sYM2gM2ekfxQX4U"
+      CLOUD_PROVIDER: "custom"
+      
+  ui:
+    enabled: true
+  
+  # Custom pricing for on-premises DGX A100 nodes
+  customPricing:
+    # Enables custom pricing configuration
+    enabled: true
+    # Customize the configmap name used for custom pricing
+    configmapName: opencost-custom-pricing
+    # Path for the pricing configuration
+    configPath: /tmp/custom-config
+    # Configures the pricing model provided in the values file
+    createConfigmap: true
+    # Sets the provider type for the custom pricing file
+    provider: custom
+    # Custom pricing for DGX A100 (amortized over 3 years)
+    costModel:
+      description: "On-premises DGX A100 pricing (amortized over 3 years)"
+      # CPU pricing per vCPU-hour
+      CPU: 0.031611
+      spotCPU: 0.031611
+      # RAM pricing per GB-hour
+      RAM: 0.004237
+      spotRAM: 0.004237
+      # GPU pricing per GPU-hour (A100 80GB)
+      # Calculation: ~$200k DGX / 8 GPUs / 3 years / 365 days / 24 hours = ~$0.95/hour
+      GPU: 0.95
+      # Storage pricing per GB-month
+      storage: 0.04
+      # Networking costs per GB
+      zoneNetworkEgress: 0.01
+      regionNetworkEgress: 0.01
+      internetNetworkEgress: 0.12
+  
+  # Metrics for ServiceMonitor
+  metrics:
+    serviceMonitor:
+      enabled: true
+      additionalLabels:
+        release: kube-prometheus-stack-1741
+
+# Prometheus configuration - external Prometheus
+prometheus:
+  internal:
+    enabled: false
+  external:
+    enabled: true
+    url: http://kube-prometheus-stack-1741-prometheus.monitoring.svc.cluster.local:9090
