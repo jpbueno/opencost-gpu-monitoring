@@ -1,4 +1,4 @@
-# Monitoring GPU Costs in Kubernetes with OpenCost and DCGM
+# Monitoring NVIDIA GPU Costs in Kubernetes with OpenCost and DCGM
 
 ## Overview
 
