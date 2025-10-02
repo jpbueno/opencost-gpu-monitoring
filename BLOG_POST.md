@@ -79,11 +79,11 @@ Datacenter multiplier: 2.5x (cooling, space, networking)
 Example (A100): 0.4kW × $0.10 × 2.5 = $0.10/GPU-hour
 ```
 
-**For this guide, we'll use $0.95/GPU-hour for on-premises A100.**
+**This guide uses $0.95/GPU-hour for on-premises A100 as an example.**
 
 ## Step 3: Create OpenCost Configuration
 
-Create all required configurations:
+Create all required configurations. The following YAML file includes the ServiceMonitor for DCGM metrics and the NodePort service for OpenCost UI/API access.
 
 ```yaml
 # opencost-config.yaml
@@ -148,7 +148,8 @@ kubectl create namespace opencost
 kubectl apply -f opencost-config.yaml
 ```
 
-Verify:
+Verify the installation with the following commands.
+
 ```bash
 kubectl get servicemonitor -n monitoring nvidia-dcgm-exporter
 kubectl get svc -n opencost opencost-ui
@@ -183,7 +184,8 @@ prometheus:
     url: http://kube-prometheus-stack-1741-prometheus.monitoring.svc.cluster.local:9090
 ```
 
-Install:
+Install OpenCost using Helm with the following commands.
+
 ```bash
 helm repo add opencost https://opencost.github.io/opencost-helm-chart
 helm repo update
@@ -242,7 +244,7 @@ prometheus:
     url: http://kube-prometheus-stack-1741-prometheus.monitoring.svc.cluster.local:9090
 ```
 
-Install OpenCost:
+Install OpenCost with custom pricing using the following Helm commands.
 
 ```bash
 # Add Helm repo
@@ -285,7 +287,12 @@ kubectl port-forward -n opencost svc/opencost-ui 9090:9090 9003:9003
 # Access: http://localhost:9090
 ```
 
+Figure 1 shows the OpenCost UI interface with cost allocation features.
+
 ![OpenCost UI Overview](images/opencost-ui-overview.png)
+*Figure 1. OpenCost UI showing cost allocation by namespace, time windows, and detailed breakdowns for CPU, RAM, GPU, storage, and network resources.*
+
+ALT text: Screenshot of the OpenCost web interface displaying a cost allocation table with multiple rows showing different Kubernetes namespaces. Each row contains columns for namespace name, CPU cost, memory cost, GPU cost, storage cost, network cost, and total cost values. The interface includes a time window selector at the top and filter options for viewing costs by namespace, pod, or label.
 
 The UI provides:
 - Cost allocation by namespace, pod, label
@@ -346,7 +353,12 @@ http://YOUR-NODE-IP:32222
 
 4. **Click Import**
 
+Figure 2 displays the imported Grafana dashboard with GPU cost metrics.
+
 ![GPU Cost Dashboard Overview](images/grafana-dashboard-overview.png)
+*Figure 2. Grafana dashboard showing GPU utilization, memory usage, cost allocation by namespace, and estimated GPU costs with real-time monitoring.*
+
+ALT text: Screenshot of a Grafana dashboard displaying multiple panels with GPU monitoring metrics. The top row shows four summary statistics: total GPU cost in the last 24 hours, total number of A100 GPUs in the cluster, average GPU utilization percentage, and A100 GPU price per hour. Below are several time-series graphs showing GPU utilization by device, GPU memory usage, and cost trends over time. The bottom section includes tables displaying GPU allocation and estimated costs broken down by Kubernetes namespace.
 
 ### Dashboard Panels
 
@@ -527,13 +539,14 @@ kubectl delete -f opencost-config.yaml
 cd ~ && rm -rf opencost-gpu-monitoring
 ```
 
+## Get Started
+
+Ready to monitor GPU costs in your Kubernetes cluster? Access the complete configuration files and dashboard JSON in the [opencost-gpu-monitoring GitHub repository](https://github.com/jpbueno/opencost-gpu-monitoring). The repository includes all the YAML files, Grafana dashboard, and detailed README to help you implement this solution in your environment.
+
+Follow the step-by-step instructions in this tutorial to set up OpenCost with DCGM integration, and start tracking your GPU costs today. If you have questions or want to share your experience, leave a comment below.
+
 ## Additional Resources
 
 - [OpenCost Documentation](https://www.opencost.io/docs/)
 - [OpenCost GitHub](https://github.com/opencost/opencost)
 - [NVIDIA DCGM Exporter](https://github.com/NVIDIA/dcgm-exporter)
-
----
-
-**Author:** JP Santana  
-**Date:** October 2, 2025  
