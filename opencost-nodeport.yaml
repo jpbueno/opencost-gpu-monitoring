@@ -1,0 +1,23 @@
+# opencost-nodeport.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: opencost-ui
+  namespace: opencost
+  labels:
+    app: opencost
+    app.kubernetes.io/name: opencost
+spec:
+  type: NodePort
+  ports:
+    - name: http-ui
+      port: 9090
+      targetPort: 9090
+      nodePort: 30091
+    - name: http-api
+      port: 9003
+      targetPort: 9003
+      nodePort: 30031
+  selector:
+    app.kubernetes.io/name: opencost
+

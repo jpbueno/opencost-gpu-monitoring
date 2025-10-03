@@ -190,4 +190,6 @@ For OpenCost issues:
 For DCGM issues:
 - GitHub: https://github.com/NVIDIA/dcgm-exporter
 
+---
 
+Author: JP Santana

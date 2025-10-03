@@ -1,19 +1,15 @@
-# OpenCost values for Cloud Environments (AWS, GCP, Azure)
-# Automatic cloud pricing detection - no custom pricing needed!
-
+# opencost-values-cloud.yaml
 opencost:
   exporter:
     defaultClusterId: my-gpu-cluster
-    # Cloud provider auto-detection - OpenCost automatically fetches pricing!
-    # No CLOUD_PROVIDER setting needed - it auto-detects AWS, GCP, or Azure
+    extraEnv:
+      PROMETHEUS_SERVER_ENDPOINT: "http://kube-prometheus-stack-1741-prometheus.monitoring.svc.cluster.local:9090"
   ui:
     enabled: true
 
 prometheus:
   internal:
-    enabled: true
-    servicemonitors:
-      enabled: true
-  external:
     enabled: false
-
+  external:
+    enabled: true
+    url: http://kube-prometheus-stack-1741-prometheus.monitoring.svc.cluster.local:9090
