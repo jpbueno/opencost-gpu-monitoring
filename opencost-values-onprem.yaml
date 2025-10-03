@@ -3,9 +3,8 @@ opencost:
     # Default cluster ID to use if cluster_id is not set in Prometheus metrics.
     defaultClusterId: dgx-a100-cluster
     
-    # Existing Prometheus server URL
+    # OpenCost will use its internal Prometheus
     extraEnv:
-      PROMETHEUS_SERVER_ENDPOINT: "http://kube-prometheus-stack-1741-prometheus.monitoring.svc.cluster.local:9090"
       CLOUD_PROVIDER_API_KEY: "AIzaSyD29bGxmHAVEOBYtgd8sYM2gM2ekfxQX4U"
       CLOUD_PROVIDER: "custom"
       
@@ -43,17 +42,12 @@ opencost:
       regionNetworkEgress: 0.01
       internetNetworkEgress: 0.12
   
-  # Metrics for ServiceMonitor
-  metrics:
-    serviceMonitor:
-      enabled: true
-      additionalLabels:
-        release: kube-prometheus-stack-1741
 
-# Prometheus configuration - external Prometheus
+# Prometheus configuration - OpenCost's built-in Prometheus
 prometheus:
   internal:
-    enabled: false
-  external:
     enabled: true
-    url: http://kube-prometheus-stack-1741-prometheus.monitoring.svc.cluster.local:9090
+    servicemonitors:
+      enabled: true
+  external:
+    enabled: false

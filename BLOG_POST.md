@@ -1,14 +1,13 @@
 # Monitoring NVIDIA GPU Costs in Kubernetes with OpenCost and DCGM
 
-## Overview
+GPU-accelerated workloads in Kubernetes can be expensive, but tracking their actual costs is challenging. Without proper cost visibility, teams struggle to optimize GPU utilization, allocate expenses accurately, and justify infrastructure investments. This tutorial teaches you how to implement comprehensive GPU cost monitoring using OpenCost and NVIDIA DCGM (Data Center GPU Manager).
 
-This guide shows you how to set up OpenCost to monitor GPU costs for NVIDIA GPUs using DCGM telemetry. Works for **any environment** and **any NVIDIA GPU** (H100, A100, V100, T4, L4, etc.).
+This solution benefits DevOps engineers, platform administrators, and FinOps teams who need to track, allocate, and optimize GPU spending across their Kubernetes clusters. You'll learn how to set up automated cost tracking that works in any environment—cloud or on-premises—with any NVIDIA GPU (H100, A100, V100, T4, L4, etc.).
 
 **What You'll Build:**
-- OpenCost with automatic cloud pricing OR custom on-premises pricing
-- Web UI and REST API for cost monitoring
-- Grafana dashboards with GPU metrics
-- Integration with DCGM for GPU telemetry
+- [OpenCost](https://www.opencost.io/) with automatic cloud pricing OR custom on-premises pricing
+- Web UI and REST API for comprehensive cost monitoring
+- Integration with [DCGM](https://developer.nvidia.com/dcgm) for GPU telemetry and utilization metrics
 
 **Pricing Approach:**
 - **Cloud (AWS/GCP/Azure):** Automatic pricing via cloud provider APIs
@@ -21,15 +20,14 @@ This guide shows you how to set up OpenCost to monitor GPU costs for NVIDIA GPUs
 
 ## Prerequisites
 
-- Kubernetes cluster with NVIDIA GPU nodes
-- NVIDIA GPU Operator installed (includes DCGM Exporter)
-- Prometheus and Grafana installed
-- Helm 3.x and kubectl access
+- [Kubernetes](https://kubernetes.io/) cluster with NVIDIA GPU nodes (1.20+)
+- [NVIDIA GPU Operator](https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/latest/index.html) installed (includes DCGM Exporter)
+- [Helm 3.x](https://helm.sh/) and [kubectl](https://kubernetes.io/docs/reference/kubectl/) access
 - NodePort access OR LoadBalancer support
 - **Cloud only:** Cloud provider credentials (OpenCost auto-detects pricing)
 - **On-premises only:** Calculated GPU pricing (see Step 2)
 
-## Step 1: Setup Project Directory
+## Step 1: Set Up Project Directory
 
 ```bash
 mkdir -p ~/opencost-gpu-monitoring && cd ~/opencost-gpu-monitoring
@@ -83,31 +81,10 @@ Example (A100): 0.4kW × $0.10 × 2.5 = $0.10/GPU-hour
 
 ## Step 3: Create OpenCost Configuration
 
-Create all required configurations. The following YAML file includes the ServiceMonitor for DCGM metrics and the NodePort service for OpenCost UI/API access.
+Create the NodePort service configuration to expose the OpenCost UI and API.
 
 ```yaml
 # opencost-config.yaml
----
-# ServiceMonitor for DCGM metrics
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: nvidia-dcgm-exporter
-  namespace: monitoring
-  labels:
-    app: nvidia-dcgm-exporter
-    release: kube-prometheus-stack-1741  # Match your Prometheus release
-spec:
-  selector:
-    matchLabels:
-      app: nvidia-dcgm-exporter
-  namespaceSelector:
-    matchNames:
-      - nvidia-gpu-operator
-  endpoints:
-    - port: gpu-metrics
-      interval: 30s
-      path: /metrics
 ---
 # NodePort service for OpenCost UI/API access
 apiVersion: v1
@@ -133,25 +110,19 @@ spec:
     app.kubernetes.io/name: opencost
 ```
 
-**Note:** Replace `kube-prometheus-stack-1741` with your Prometheus Operator release name:
-```bash
-kubectl get prometheus -n monitoring -o yaml | grep "release:"
-```
-
-Create namespace and apply the configuration:
+Create the OpenCost namespace and apply the configuration:
 
 ```bash
 # Create opencost namespace
 kubectl create namespace opencost
 
-# Apply ServiceMonitor and NodePort service
+# Apply NodePort service
 kubectl apply -f opencost-config.yaml
 ```
 
-Verify the installation with the following commands.
+Verify the service was created.
 
 ```bash
-kubectl get servicemonitor -n monitoring nvidia-dcgm-exporter
 kubectl get svc -n opencost opencost-ui
 ```
 
@@ -319,63 +290,6 @@ curl -s 'http://YOUR-NODE-IP:30031/allocation?window=24h' | \
 curl -s 'http://YOUR-NODE-IP:30031/healthz'
 ```
 
-## Step 7: Setup Grafana Dashboard
-
-### Login to Grafana
-
-```bash
-# Get Grafana password
-kubectl get secret -n monitoring prometheus-grafana \
-  -o jsonpath="{.data.admin-password}" | base64 --decode && echo
-
-# Access Grafana
-http://YOUR-NODE-IP:32222
-# Username: admin
-# Password: (from command above)
-```
-
-### Import GPU Cost Dashboard
-
-1. **Navigate to Import:**
-   - Click **"+"** → **Import**
-   - Or: **Dashboards** → **Browse** → **New** → **Import**
-
-2. **Upload Dashboard:**
-   - Click **"Upload JSON file"**
-   - Select `grafana-gpu-cost-dashboard.json`
-
-3. **Select Data Source:**
-   - Choose **Prometheus** (or `default`, `prometheus-1`)
-   - If missing, add data source:
-     ```
-     URL: http://kube-prometheus-stack-1741-prometheus.monitoring.svc.cluster.local:9090
-     ```
-
-4. **Click Import**
-
-Figure 2 displays the imported Grafana dashboard with GPU cost metrics.
-
-![GPU Cost Dashboard Overview](images/grafana-dashboard-overview.png)
-*Figure 2. Grafana dashboard showing GPU utilization, memory usage, cost allocation by namespace, and estimated GPU costs with real-time monitoring.*
-
-ALT text: Screenshot of a Grafana dashboard displaying multiple panels with GPU monitoring metrics. The top row shows four summary statistics: total GPU cost in the last 24 hours, total number of A100 GPUs in the cluster, average GPU utilization percentage, and A100 GPU price per hour. Below are several time-series graphs showing GPU utilization by device, GPU memory usage, and cost trends over time. The bottom section includes tables displaying GPU allocation and estimated costs broken down by Kubernetes namespace.
-
-### Dashboard Panels
-
-**Top Metrics:**
-- Total GPU Cost (Last 24h)
-- Total A100 GPUs in Cluster
-- Average GPU Utilization
-- A100 GPU Price per Hour
-
-**Detailed Metrics:**
-- GPU Utilization by Device (0-100%)
-- GPU Memory Usage (A100 80GB)
-- GPU Allocation by Namespace
-- Estimated GPU Cost by Namespace
-- GPU Workloads Table (cost & utilization)
-- GPU Power & Temperature
-
 ## Understanding Your Costs
 
 **Example Cost Calculations:**
@@ -387,30 +301,7 @@ ALT text: Screenshot of a Grafana dashboard displaying multiple panels with GPU 
 
 ## Troubleshooting
 
-### "No Data" in Grafana
-
-**Check Prometheus Data Source:**
-```bash
-# In Grafana: Configuration → Data Sources → Prometheus
-# Test connection should show: "Data source is working"
-```
-
-**Verify DCGM Metrics:**
-```bash
-# Check DCGM pods
-kubectl get pods -n nvidia-gpu-operator | grep dcgm
-
-# Verify metrics endpoint
-kubectl run curl-test --rm -it --image=curlimages/curl --restart=Never \
-  -- curl -s http://nvidia-dcgm-exporter.nvidia-gpu-operator:9400/metrics | grep DCGM_FI_DEV_GPU_UTIL
-```
-
-**Check ServiceMonitor:**
-```bash
-kubectl get servicemonitor -n monitoring nvidia-dcgm-exporter
-```
-
-### OpenCost Shows $0 GPU Costs
+### OpenCost UI Shows $0 GPU Costs
 
 **Verify Custom Pricing:**
 ```bash
@@ -434,9 +325,9 @@ kubectl get pods --all-namespaces -o json | \
 kubectl logs -n opencost -l app.kubernetes.io/name=opencost -c opencost
 
 # Common issues:
-# - Wrong Prometheus URL
-# - Custom pricing not mounted
-# - Prometheus not reachable
+# - Custom pricing not mounted correctly
+# - DCGM metrics not available
+# - Insufficient permissions
 ```
 
 ## Automation Scripts
@@ -496,30 +387,30 @@ fi
 
 ## Summary
 
-You now have a complete GPU cost monitoring solution:
+You've successfully implemented a comprehensive GPU cost monitoring solution that provides real-time visibility into Kubernetes GPU spending. To execute this successfully, keep these core considerations in mind:
 
-- **OpenCost** with custom A100 pricing
-- **DCGM** GPU telemetry integration
-- **Prometheus** metrics collection
-- **OpenCost UI** at port 30091
-- **Grafana dashboards** with GPU metrics
-- **API** for automation at port 30031  
+**For Cloud Deployments:**
+- Rely on OpenCost's automatic price detection for accuracy
+- Verify cloud provider credentials are properly configured
+- Cross-reference costs with your cloud billing dashboard
 
-### Access Your System
+**For On-Premises Deployments:**
+- Calculate accurate GPU pricing including full total cost of ownership (hardware amortization, power, cooling, maintenance)
+- Update pricing values as hardware costs or electricity rates change
+- Consider both amortized and operational cost models
 
-- **OpenCost UI:** http://YOUR-NODE-IP:30091
-- **OpenCost API:** http://YOUR-NODE-IP:30031
-- **Grafana:** http://YOUR-NODE-IP:32222
+**For All Environments:**
+- Ensure DCGM Exporter is properly configured and exporting GPU metrics
+- Set up cost alerts using the OpenCost API to catch unexpected spending spikes
+- Review GPU efficiency metrics regularly in the OpenCost UI—low utilization indicates optimization opportunities
+- Use namespaces and labels for accurate cost allocation across teams and projects
 
-### Files Created
+### Your Deployed System
 
-```
-opencost-gpu-monitoring/
-├── opencost-config.yaml              # ServiceMonitor + NodePort
-├── opencost-values.yaml              # Helm configuration
-├── grafana-gpu-cost-dashboard.json   # Dashboard JSON
-└── images/                           # Screenshots
-```
+You now have the following components running:
+
+- **OpenCost UI:** http://YOUR-NODE-IP:30091 (cost allocation interface with GPU metrics)
+- **OpenCost API:** http://YOUR-NODE-IP:30031 (automation and reporting endpoint)
 
 ## Cleanup (Optional)
 
@@ -541,9 +432,9 @@ cd ~ && rm -rf opencost-gpu-monitoring
 
 ## Get Started
 
-Ready to monitor GPU costs in your Kubernetes cluster? Access the complete configuration files and dashboard JSON in the [opencost-gpu-monitoring GitHub repository](https://github.com/jpbueno/opencost-gpu-monitoring). The repository includes all the YAML files, Grafana dashboard, and detailed README to help you implement this solution in your environment.
+Ready to monitor GPU costs in your Kubernetes cluster? Access the complete configuration files in the [opencost-gpu-monitoring GitHub repository](https://github.com/jpbueno/opencost-gpu-monitoring). The repository includes all the YAML files and detailed README to help you implement this solution in your environment.
 
-Follow the step-by-step instructions in this tutorial to set up OpenCost with DCGM integration, and start tracking your GPU costs today. If you have questions or want to share your experience, leave a comment below.
+Follow the step-by-step instructions in this tutorial to set up OpenCost with DCGM integration, and start tracking your GPU costs today using the OpenCost UI and API. If you have questions or want to share your experience, leave a comment below.
 
 ## Additional Resources
 

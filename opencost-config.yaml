@@ -1,25 +1,4 @@
 ---
-# ServiceMonitor for DCGM metrics
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: nvidia-dcgm-exporter
-  namespace: monitoring
-  labels:
-    app: nvidia-dcgm-exporter
-    release: kube-prometheus-stack-1741
-spec:
-  selector:
-    matchLabels:
-      app: nvidia-dcgm-exporter
-  namespaceSelector:
-    matchNames:
-      - nvidia-gpu-operator
-  endpoints:
-    - port: gpu-metrics
-      interval: 30s
-      path: /metrics
----
 # NodePort service for OpenCost UI/API access
 apiVersion: v1
 kind: Service
