@@ -339,7 +339,9 @@ kubectl apply -f opencost-ingress.yaml
 kubectl get ingress -n opencost
 ```
 
-Configure DNS to point `opencost.example.com` to your Ingress external IP. For production, create a DNS A record (Type: A, TTL: 300) in your domain settings. For local testing, add the IP to `/etc/hosts`:
+Configure DNS to point `opencost.example.com` to your Ingress external IP. For production, create a DNS A record (Type: A, TTL: 300) in your domain settings. 
+
+For local testing, add the IP to `/etc/hosts`:
 
 ```bash
 # Get the Ingress external IP
