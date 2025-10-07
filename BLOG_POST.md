@@ -389,6 +389,74 @@ curl -s "${OPENCOST_API}/allocation?window=24h&aggregate=namespace" | \
 
 **Query parameters:** Use `window` to set time range (`1h`, `24h`, `7d`, `30d`, `week`, `month`), `aggregate` to group costs by dimension (`namespace`, `pod`, `controller`, `label`), and `accumulate=true` for cumulative totals instead of time-windowed results.
 
+## Comparing Cloud vs On-Premises GPU Costs
+
+OpenCost enables organizations to compare GPU infrastructure costs between cloud and on-premises environments using identical workload consumption data. This comparison requires at least one deployed environment to establish baseline consumption patterns.
+
+### Comparison Workflow
+
+**Scenario:** You have GPU workloads running in the cloud and want to evaluate the cost of moving to on-premises infrastructure.
+
+**Step 1: Track actual consumption in your current environment**
+
+Deploy OpenCost in your existing cloud Kubernetes cluster and collect GPU consumption data for a representative period (1-2 weeks minimum):
+
+```bash
+# Get weekly GPU consumption by namespace
+curl -s "${OPENCOST_API}/allocation?window=7d&aggregate=namespace" | \
+  jq '.data[0] | to_entries[] | select(.value.gpuHours > 0) | {
+    namespace: .key,
+    gpuHours: .value.gpuHours,
+    gpuCost: .value.gpuCost
+  }'
+```
+
+**Example output:**
+```json
+{
+  "namespace": "ml-training",
+  "gpuHours": 1680,
+  "gpuCost": 5040.00
+}
+{
+  "namespace": "inference-prod",
+  "gpuHours": 840,
+  "gpuCost": 2520.00
+}
+```
+
+**Step 2: Calculate on-premises equivalent costs**
+
+Apply your on-premises GPU pricing (from `opencost-values-onprem.yaml`) to the same consumption patterns:
+
+```bash
+# On-premises GPU rate: $0.95/hour (example)
+# ml-training: 1,680 GPU-hours × $0.95 = $1,596/week
+# inference-prod: 840 GPU-hours × $0.95 = $798/week
+# Total on-premises: $2,394/week vs $7,560/week cloud
+```
+
+**Step 3: Extrapolate to annual costs**
+
+```bash
+# Cloud annual cost: $7,560/week × 52 weeks = $393,120
+# On-premises annual cost: $2,394/week × 52 weeks = $124,488
+# Potential savings: $268,632/year (68% reduction)
+```
+
+**Step 4: Factor in total cost of ownership**
+
+Remember to include additional on-premises costs not captured by OpenCost:
+- Hardware acquisition and depreciation
+- Datacenter space and cooling
+- Network infrastructure
+- Maintenance and support staff
+- Power and utilities
+
+### Key Insight
+
+OpenCost's value for cost comparison is its **consistent allocation methodology** across environments. Because it measures GPU resource requests the same way in cloud and on-premises clusters, you can confidently apply different pricing models to identical workload patterns. This eliminates the guesswork in infrastructure migration decisions and provides quantified data for ROI calculations and cloud contract negotiations.
+
 ### Step 6: Clean Up (Optional)
 
 To uninstall OpenCost when no longer needed:
