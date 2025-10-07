@@ -361,33 +361,24 @@ Figure 1 shows the OpenCost UI with cost allocation details.
 
 ### Step 5: Query NVIDIA GPU Costs via API
 
-Set your OpenCost API endpoint based on the access method you chose in Step 4:
+The OpenCost REST API enables cost automation, integration with FinOps tools, and programmatic reporting. Set your API endpoint based on your access method:
 
 ```bash
-# If using NodePort (Option A):
-NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
-OPENCOST_API="http://${NODE_IP}:30031"
+# NodePort (Option A)
+OPENCOST_API="http://$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}'):30031"
 
-# If using Port Forward (Option B):
+# Port Forward (Option B)
 OPENCOST_API="http://localhost:9003"
 
-# If using Ingress (Option C):
-OPENCOST_API="http://opencost.example.com"  # Replace with your domain
+# Ingress (Option C)
+OPENCOST_API="http://opencost.example.com"
 ```
 
-**Health check:**
-```bash
-curl -s "${OPENCOST_API}/healthz"
-```
+Query GPU workload costs:
 
-**Get costs by namespace (24 hours):**
 ```bash
-curl -s "${OPENCOST_API}/allocation?window=24h&aggregate=namespace" | jq '.'
-```
-
-**Filter NVIDIA GPU workloads only:**
-```bash
-curl -s "${OPENCOST_API}/allocation?window=24h" | \
+# Get GPU costs by namespace for the last 24 hours
+curl -s "${OPENCOST_API}/allocation?window=24h&aggregate=namespace" | \
   jq '.data[0] | to_entries[] | select(.value.gpuHours > 0) | {
     namespace: .key,
     gpuHours: .value.gpuHours,
@@ -396,19 +387,7 @@ curl -s "${OPENCOST_API}/allocation?window=24h" | \
   }'
 ```
 
-**Query parameters:**
-- `window`: Time range (`1h`, `24h`, `7d`, `30d`, `today`, `week`, `month`)
-- `aggregate`: Group by (`namespace`, `pod`, `controller`, `label`)
-- `accumulate`: Return cumulative costs
-
-**Example cost calculations:**
-
-| Scenario | Calculation | Monthly Cost |
-|----------|-------------|--------------|
-| 4x H100 (24/7) | 4 × 720h × $5.00 | $14,400 |
-| 8x A100 (24/7) | 8 × 720h × $1.50 | $8,640 |
-| 16x V100 (8h/day) | 16 × 240h × $0.60 | $2,304 |
-| 32x T4 (8h/day) | 32 × 240h × $0.30 | $2,304 |
+Common query parameters: `window` (`1h`, `24h`, `7d`, `30d`, `week`, `month`), `aggregate` (`namespace`, `pod`, `controller`, `label`), `accumulate` (cumulative costs).
 
 ### Step 6: Clean Up (Optional)
 
