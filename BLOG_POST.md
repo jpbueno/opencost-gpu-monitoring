@@ -339,38 +339,17 @@ kubectl apply -f opencost-ingress.yaml
 kubectl get ingress -n opencost
 ```
 
-Configure DNS access:
+Configure DNS to point `opencost.example.com` to your Ingress external IP. For production, create a DNS A record (Type: A, TTL: 300) in your domain settings. For local testing, add the IP to `/etc/hosts`:
 
 ```bash
-# Get the Ingress controller's external IP or hostname
-kubectl get ingress opencost-ingress -n opencost
-
-# Example output:
-# NAME               CLASS   HOSTS                   ADDRESS          PORTS   AGE
-# opencost-ingress   nginx   opencost.example.com    203.0.113.10     80      5m
-```
-
-**Option 1 - Production DNS Setup:**
-
-Add a DNS A record in your domain's DNS settings:
-- **Hostname:** `opencost` (or `opencost.example.com` depending on your DNS provider)
-- **Type:** A
-- **Value:** The external IP from the command above (e.g., `203.0.113.10`)
-- **TTL:** 300 (or your preferred value)
-
-**Option 2 - Local Testing with /etc/hosts:**
-
-For quick testing without DNS, add an entry to your local `/etc/hosts` file:
-
-```bash
-# Get the external IP
+# Get the Ingress external IP
 INGRESS_IP=$(kubectl get ingress opencost-ingress -n opencost -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 
-# Add to /etc/hosts (requires sudo)
+# For local testing: add to /etc/hosts
 echo "$INGRESS_IP opencost.example.com" | sudo tee -a /etc/hosts
 ```
 
-After DNS propagates (or updating /etc/hosts), open your browser to `http://opencost.example.com`.
+Open your browser to `http://opencost.example.com` to access the OpenCost UI.
 
 Figure 1 shows the OpenCost UI with cost allocation details.
 
