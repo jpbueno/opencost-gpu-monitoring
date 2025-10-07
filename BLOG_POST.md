@@ -213,32 +213,23 @@ kubectl logs -n opencost -l app.kubernetes.io/name=opencost -c opencost | grep -
 
 ### Step 4: Access the OpenCost Interface
 
-Choose the access method for your environment:
+Access the OpenCost UI using the NodePort service configured in Step 3:
 
-**NodePort (default, works anywhere):**
 ```bash
-# Get any node's IP
+# Get any node's IP address
 NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
-echo "UI: http://${NODE_IP}:30091"
-echo "API: http://${NODE_IP}:30031"
+
+# Display access URLs
+echo "OpenCost UI: http://${NODE_IP}:30091"
+echo "OpenCost API: http://${NODE_IP}:30031"
 ```
 
-**Port Forward (local development):**
+Open your browser and navigate to `http://NODE_IP:30091` to access the OpenCost UI.
+
+**Alternative for local development:** Use port forwarding to access OpenCost on localhost:
 ```bash
 kubectl port-forward -n opencost svc/opencost-ui 9090:9090 9003:9003
-# Access: http://localhost:9090
-```
-
-**LoadBalancer (cloud with LB support):**
-```bash
-kubectl patch svc opencost-ui -n opencost -p '{"spec": {"type": "LoadBalancer"}}'
-kubectl get svc opencost-ui -n opencost  # Wait for EXTERNAL-IP
-```
-
-**Ingress (production):**
-```bash
-# Create ingress pointing to service: opencost-ui.opencost:9090
-# Example hostname: opencost.your-domain.com
+# Access UI at: http://localhost:9090
 ```
 
 Figure 1 shows the OpenCost UI with cost allocation details.
@@ -249,16 +240,9 @@ Figure 1 shows the OpenCost UI with cost allocation details.
 
 ### Step 5: Query NVIDIA GPU Costs via API
 
-Set your OpenCost API endpoint:
+Set your OpenCost API endpoint (using the same NODE_IP from Step 4):
 ```bash
-# For NodePort
 OPENCOST_API="http://${NODE_IP}:30031"
-
-# For Port Forward
-OPENCOST_API="http://localhost:9003"
-
-# For LoadBalancer
-OPENCOST_API="http://YOUR-EXTERNAL-IP:9003"
 ```
 
 **Health check:**
