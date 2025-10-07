@@ -83,9 +83,9 @@ Example:
 - L4: 72W
 - L40: 300W
 
-**Typical datacenter multiplier:** 2-3x (includes cooling, networking, space, maintenance)
-
 ### Step 3: Install OpenCost Using Helm
+
+Copy and save the following configuration files to your local machine. These files define the OpenCost service, Prometheus connection, and GPU pricing settings for your deployment.
 
 Create the NodePort service configuration to expose OpenCost:
 
