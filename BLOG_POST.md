@@ -213,18 +213,60 @@ kubectl logs -n opencost -l app.kubernetes.io/name=opencost -c opencost | grep -
 
 ### Step 4: Access the OpenCost Interface
 
-Access the OpenCost UI using the NodePort service configured in Step 3:
+Create an Ingress resource to expose OpenCost with a custom hostname:
 
-```bash
-# Get any node's IP address
-NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
-
-# Display access URLs
-echo "OpenCost UI: http://${NODE_IP}:30091"
-echo "OpenCost API: http://${NODE_IP}:30031"
+```yaml
+# opencost-ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: opencost-ingress
+  namespace: opencost
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: opencost.example.com  # Replace with your domain
+    http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: opencost-ui
+            port:
+              number: 9003
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: opencost-ui
+            port:
+              number: 9090
 ```
 
-Open your browser and navigate to `http://NODE_IP:30091` to access the OpenCost UI.
+Apply the Ingress configuration:
+
+```bash
+# Save the configuration above and apply it
+kubectl apply -f opencost-ingress.yaml
+
+# Verify Ingress is created
+kubectl get ingress -n opencost
+```
+
+Add a DNS record pointing `opencost.example.com` to your Ingress controller's external IP, or update your `/etc/hosts` file for local testing:
+
+```bash
+# Get Ingress external IP
+kubectl get ingress opencost-ingress -n opencost
+
+# For local testing, add to /etc/hosts:
+# INGRESS_IP opencost.example.com
+```
+
+Open your browser and navigate to `http://opencost.example.com` to access the OpenCost UI.
 
 **Alternative for local development:** Use port forwarding to access OpenCost on localhost:
 ```bash
@@ -240,9 +282,10 @@ Figure 1 shows the OpenCost UI with cost allocation details.
 
 ### Step 5: Query NVIDIA GPU Costs via API
 
-Set your OpenCost API endpoint (using the same NODE_IP from Step 4):
+Set your OpenCost API endpoint using the Ingress hostname from Step 4:
+
 ```bash
-OPENCOST_API="http://${NODE_IP}:30031"
+OPENCOST_API="http://opencost.example.com/api"  # Replace with your domain
 ```
 
 **Health check:**
