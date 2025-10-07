@@ -213,6 +213,25 @@ kubectl logs -n opencost -l app.kubernetes.io/name=opencost -c opencost | grep -
 
 ### Step 4: Access the OpenCost Interface
 
+Choose one of the following access methods based on your environment:
+
+#### Option A: NodePort (Works Anywhere)
+
+Access OpenCost using the NodePort service configured in Step 3:
+
+```bash
+# Get any node's IP address
+NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+
+# Display access URLs
+echo "OpenCost UI: http://${NODE_IP}:30091"
+echo "OpenCost API: http://${NODE_IP}:30031"
+```
+
+Open your browser and navigate to `http://NODE_IP:30091` to access the OpenCost UI.
+
+#### Option B: Ingress (Production with Custom Domain)
+
 Create an Ingress resource to expose OpenCost with a custom hostname:
 
 ```yaml
@@ -223,52 +242,96 @@ metadata:
   name: opencost-ingress
   namespace: opencost
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/use-regex: "true"
 spec:
   ingressClassName: nginx
   rules:
   - host: opencost.example.com  # Replace with your domain
     http:
       paths:
-      - path: /api
+      - path: /allocation
         pathType: Prefix
         backend:
           service:
-            name: opencost-ui
+            name: opencost
+            port:
+              number: 9003
+      - path: /healthz
+        pathType: Prefix
+        backend:
+          service:
+            name: opencost
             port:
               number: 9003
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: opencost-ui
+            name: opencost
             port:
               number: 9090
+```
+
+**Ingress Controller Configuration by Cloud Provider:**
+
+The configuration above uses NGINX Ingress Controller. Adjust the `ingressClassName` and `annotations` based on your environment:
+
+| Provider | Ingress Class | Annotations | Notes |
+|----------|---------------|-------------|-------|
+| **NGINX** | `nginx` | `nginx.ingress.kubernetes.io/use-regex: "true"` | Works on any cluster |
+| **AWS (ALB)** | `alb` | `alb.ingress.kubernetes.io/scheme: internet-facing`<br>`alb.ingress.kubernetes.io/target-type: ip` | Requires [AWS Load Balancer Controller](https://kubernetes-sigs.github.io/aws-load-balancer-controller/) |
+| **GCP (GCE)** | `gce` | `kubernetes.io/ingress.class: "gce"` | Built-in on GKE |
+| **Azure** | `azure/application-gateway` | `appgw.ingress.kubernetes.io/use-private-ip: "false"` | Requires [Application Gateway Ingress Controller](https://azure.github.io/application-gateway-kubernetes-ingress/) |
+| **OCI** | `oci-load-balancer` | `oci.oraclecloud.com/load-balancer-type: "lb"` | Built-in on OKE |
+
+**Example for AWS ALB Ingress Controller:**
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: opencost-ingress
+  namespace: opencost
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /healthz
+spec:
+  ingressClassName: alb
+  rules:
+  - host: opencost.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: opencost
+            port:
+              number: 9090
+```
+
+**To check your available Ingress classes:**
+
+```bash
+kubectl get ingressclass
 ```
 
 Apply the Ingress configuration:
 
 ```bash
-# Save the configuration above and apply it
 kubectl apply -f opencost-ingress.yaml
 
 # Verify Ingress is created
 kubectl get ingress -n opencost
 ```
 
-Add a DNS record pointing `opencost.example.com` to your Ingress controller's external IP, or update your `/etc/hosts` file for local testing:
+Add a DNS record pointing `opencost.example.com` to your Ingress controller's external IP, then open your browser to `http://opencost.example.com`.
 
-```bash
-# Get Ingress external IP
-kubectl get ingress opencost-ingress -n opencost
+#### Option C: Port Forward (Local Development)
 
-# For local testing, add to /etc/hosts:
-# INGRESS_IP opencost.example.com
-```
+For quick local testing without exposing services:
 
-Open your browser and navigate to `http://opencost.example.com` to access the OpenCost UI.
-
-**Alternative for local development:** Use port forwarding to access OpenCost on localhost:
 ```bash
 kubectl port-forward -n opencost svc/opencost-ui 9090:9090 9003:9003
 # Access UI at: http://localhost:9090
@@ -282,10 +345,18 @@ Figure 1 shows the OpenCost UI with cost allocation details.
 
 ### Step 5: Query NVIDIA GPU Costs via API
 
-Set your OpenCost API endpoint using the Ingress hostname from Step 4:
+Set your OpenCost API endpoint based on the access method you chose in Step 4:
 
 ```bash
-OPENCOST_API="http://opencost.example.com/api"  # Replace with your domain
+# If using NodePort (Option A):
+NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+OPENCOST_API="http://${NODE_IP}:30031"
+
+# If using Ingress (Option B):
+OPENCOST_API="http://opencost.example.com"  # Replace with your domain
+
+# If using Port Forward (Option C):
+OPENCOST_API="http://localhost:9003"
 ```
 
 **Health check:**
