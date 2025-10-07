@@ -387,7 +387,7 @@ curl -s "${OPENCOST_API}/allocation?window=24h&aggregate=namespace" | \
   }'
 ```
 
-Common query parameters: `window` (`1h`, `24h`, `7d`, `30d`, `week`, `month`), `aggregate` (`namespace`, `pod`, `controller`, `label`), `accumulate` (cumulative costs).
+**Query parameters:** Use `window` to set time range (`1h`, `24h`, `7d`, `30d`, `week`, `month`), `aggregate` to group costs by dimension (`namespace`, `pod`, `controller`, `label`), and `accumulate=true` for cumulative totals instead of time-windowed results.
 
 ### Step 6: Clean Up (Optional)
 
