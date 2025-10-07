@@ -174,7 +174,7 @@ prometheus:
     url: http://YOUR-PROMETHEUS-SVC.NAMESPACE:PORT
 ```
 
-Save these configurations to files and deploy OpenCost:
+Deploy OpenCost using the saved configuration files:
 
 ```bash
 # Create namespace
