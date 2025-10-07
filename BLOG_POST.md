@@ -134,7 +134,7 @@ prometheus:
     url: http://YOUR-PROMETHEUS-SVC.NAMESPACE:PORT
 ```
 
-**For on-premises deployments**, create this Helm values file. Update the Prometheus endpoint and NVIDIA GPU pricing (line 36):
+**For on-premises deployments**, create this Helm values file. Update the Prometheus endpoint and NVIDIA GPU pricing (line 24):
 
 ```yaml
 # opencost-values-onprem.yaml
