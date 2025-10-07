@@ -215,7 +215,9 @@ kubectl logs -n opencost -l app.kubernetes.io/name=opencost -c opencost | grep -
 
 Choose one of the following access methods based on your environment:
 
-#### Option A: NodePort (Works Anywhere)
+#### Option A: NodePort
+
+**Note:** Requires network routes from your local computer to the Kubernetes nodes.
 
 Access OpenCost using the NodePort service configured in Step 3:
 
@@ -230,7 +232,18 @@ echo "OpenCost API: http://${NODE_IP}:30031"
 
 Open your browser and navigate to `http://NODE_IP:30091` to access the OpenCost UI.
 
-#### Option B: Ingress (Production with Custom Domain)
+#### Option B: Port Forward (Local Development)
+
+For quick local testing without exposing services:
+
+```bash
+kubectl port-forward -n opencost svc/opencost-ui 9090:9090 9003:9003
+# Access UI at: http://localhost:9090
+```
+
+#### Option C: Ingress
+
+**Note:** Recommended approach for production deployments.
 
 Create an Ingress resource to expose OpenCost with a custom hostname:
 
@@ -326,16 +339,38 @@ kubectl apply -f opencost-ingress.yaml
 kubectl get ingress -n opencost
 ```
 
-Add a DNS record pointing `opencost.example.com` to your Ingress controller's external IP, then open your browser to `http://opencost.example.com`.
-
-#### Option C: Port Forward (Local Development)
-
-For quick local testing without exposing services:
+Configure DNS access:
 
 ```bash
-kubectl port-forward -n opencost svc/opencost-ui 9090:9090 9003:9003
-# Access UI at: http://localhost:9090
+# Get the Ingress controller's external IP or hostname
+kubectl get ingress opencost-ingress -n opencost
+
+# Example output:
+# NAME               CLASS   HOSTS                   ADDRESS          PORTS   AGE
+# opencost-ingress   nginx   opencost.example.com    203.0.113.10     80      5m
 ```
+
+**Option 1 - Production DNS Setup:**
+
+Add a DNS A record in your domain's DNS settings:
+- **Hostname:** `opencost` (or `opencost.example.com` depending on your DNS provider)
+- **Type:** A
+- **Value:** The external IP from the command above (e.g., `203.0.113.10`)
+- **TTL:** 300 (or your preferred value)
+
+**Option 2 - Local Testing with /etc/hosts:**
+
+For quick testing without DNS, add an entry to your local `/etc/hosts` file:
+
+```bash
+# Get the external IP
+INGRESS_IP=$(kubectl get ingress opencost-ingress -n opencost -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+
+# Add to /etc/hosts (requires sudo)
+echo "$INGRESS_IP opencost.example.com" | sudo tee -a /etc/hosts
+```
+
+After DNS propagates (or updating /etc/hosts), open your browser to `http://opencost.example.com`.
 
 Figure 1 shows the OpenCost UI with cost allocation details.
 
@@ -352,11 +387,11 @@ Set your OpenCost API endpoint based on the access method you chose in Step 4:
 NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
 OPENCOST_API="http://${NODE_IP}:30031"
 
-# If using Ingress (Option B):
-OPENCOST_API="http://opencost.example.com"  # Replace with your domain
-
-# If using Port Forward (Option C):
+# If using Port Forward (Option B):
 OPENCOST_API="http://localhost:9003"
+
+# If using Ingress (Option C):
+OPENCOST_API="http://opencost.example.com"  # Replace with your domain
 ```
 
 **Health check:**
